@@ -121,6 +121,7 @@ class ExtendedFx:
         self.colors = bytes(s.get("colors", [0, 255, 0, 0, 0, 255]))
         self.speed = s.get("speed", 2)
         self.wave_dir = s.get("wave_dir", 1)
+        self.keys = s.get("keys", {})  # per-key colours, for the "custom" effect
 
     def _send(self, name: str, size: int, effect: int, extra: bytes = b"", colors: bytes = b"", tid: int | None = None,
               speed: int | None = None, wave_dir: int | None = None):
@@ -202,16 +203,39 @@ class LitDevice(NativeDevice):
         self.cmd(0x0F, 0x04, 0x03, bytes([VARSTORE, self.BRIGHTNESS_LED, raw]))
 
 
+# Tartarus V2 lighting matrix (4 rows x 6 columns, from OpenRGB's RazerDevices.cpp): which light is which key.
+TARTARUS_V2_MATRIX = {**{f"key{n:02d}": ((n - 1) // 5, (n - 1) % 5) for n in range(1, 20)},
+                      "wheel_click": (3, 4), "space": (3, 5)}
+
+
 class TartarusV2(LitDevice):
     PID = 0x022B
     NAME = "Razer Tartarus V2"
     type = "keypad"
+    MATRIX = TARTARUS_V2_MATRIX
+    ROWS, COLS = 4, 6
+
+    def set_key_colours(self, keys: dict[str, tuple[int, int, int]], base=(0, 0, 0)):
+        """Per-key lighting: one colour per lit key (by layout button id), base colour for the rest."""
+        grid = [[tuple(base)] * self.COLS for _ in range(self.ROWS)]
+        for key, rgb in keys.items():
+            if key in self.MATRIX:
+                r, c = self.MATRIX[key]
+                grid[r][c] = tuple(int(v) for v in rgb[:3])
+        for row, colours in enumerate(grid):
+            rgb = bytes(v for colour in colours for v in colour)
+            self.cmd(0x0F, 0x03, 0x47, bytes([0, 0, row, 0, self.COLS - 1]) + rgb)
+        self.cmd(0x0F, 0x02, 0x0C, bytes([NOSTORE, ZERO_LED, 0x08]))  # show the custom frame
+        self.fx.effect = "custom"
+        self.fx.keys = {k: list(v)[:3] for k, v in keys.items()}
+        self.fx.colors = (bytes(base) + self.fx.colors[3:])[:6]
+        self.fx.state.save(effect="custom", keys=self.fx.keys, colors=list(self.fx.colors))
     BRIGHTNESS_LED = ZERO_LED
     BREATH_TID = 0x3F  # the only Tartarus V2 command sent with 0x3F (OpenRazer razerkbd_driver.c)
     CAPS = frozenset({
         "lighting_static", "lighting_spectrum", "lighting_wave", "lighting_breath_single", "lighting_breath_dual",
         "lighting_breath_random", "lighting_reactive", "lighting_starlight_single", "lighting_starlight_dual",
-        "lighting_starlight_random", "lighting_none", "brightness",
+        "lighting_starlight_random", "lighting_none", "brightness", "lighting_custom",
         "lighting_profile_led_red", "lighting_profile_led_green", "lighting_profile_led_blue",
     })
 

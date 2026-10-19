@@ -25,6 +25,8 @@ def driver_for(device_id: str) -> NativeDevice | None:
 def capture(dev) -> dict:
     fx = dev.fx
     d = {"effect": fx.effect, "colors": list(fx.colors), "speed": fx.speed, "wave_dir": fx.wave_dir}
+    if getattr(fx, "keys", None):
+        d["keys"] = fx.keys
     if dev.has("brightness"):
         d["brightness"] = round(dev.brightness)
     leds = {c: bool(getattr(dev, f"profile_led_{c}")) for c in ("red", "green", "blue")
@@ -39,7 +41,9 @@ def apply(dev, d: dict) -> None:
     effect = d.get("effect", "static")
     c = (list(d.get("colors", [])) + [0] * 6)[:6]
     speed = d.get("speed", 2)
-    if dev.has(f"lighting_{effect}"):
+    if effect == "custom" and hasattr(dev, "set_key_colours"):
+        dev.set_key_colours(d.get("keys", {}), c[:3])
+    elif dev.has(f"lighting_{effect}"):
         if effect in ONE_COLOUR:
             getattr(fx, effect)(*c[:3])
         elif effect == "breath_dual":

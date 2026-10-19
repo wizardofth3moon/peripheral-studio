@@ -20,6 +20,7 @@ EFFECTS = [
     ("lighting_starlight_single", "Starlight", 1, "starlight"),
     ("lighting_starlight_dual", "Starlight, two colours", 2, "starlight"),
     ("lighting_starlight_random", "Starlight, random", 0, "starlight"),
+    ("lighting_custom", "Per key", 1, None),
     ("lighting_none", "Off", 0, None),
 ]
 REACTIVE = [("Short (0.5 s)", 1), ("Medium (1 s)", 2), ("Long (1.5 s)", 3), ("Very long (2 s)", 4)]
@@ -87,6 +88,15 @@ class LightingPage(Adw.PreferencesPage):
             self.brightness = None
 
         leds = [c for c in ("red", "green", "blue") if device.has(f"lighting_profile_led_{c}")]
+        # Per-key colours (devices with a lighting matrix, e.g. the Tartarus V2)
+        self.key_colours: dict[str, list[int]] = dict(getattr(getattr(self.razer, "fx", None), "keys", {}) or {})
+        self.key_buttons: dict[str, Gtk.Button] = {}
+        self._key_timer = 0
+        self.keys_group = None
+        matrix = getattr(self.razer, "MATRIX", None)
+        if matrix and device.has("lighting_custom"):
+            self._build_key_painter(matrix)
+
         self.led_rows = {}
         if leds:
             group = Adw.PreferencesGroup(title="Profile indicator",
@@ -178,6 +188,7 @@ class LightingPage(Adw.PreferencesPage):
                 colors = list(fx.colors) + [0] * 6
                 for i, btn in enumerate(self.color_btns):
                     btn.set_rgba(_rgba(*colors[i * 3:i * 3 + 3]))
+                self._show_key_colours()  # unpainted keys take the (now loaded) "other keys" colour
                 self._update_rows()
                 self._speed_hint = fx.speed
                 self._dir_hint = fx.wave_dir
@@ -195,8 +206,87 @@ class LightingPage(Adw.PreferencesPage):
         extra = self.effects[self.effect_row.get_selected()][3]
         return {"reactive": REACTIVE, "starlight": STARLIGHT, "direction": DIRECTIONS}.get(extra, [])
 
+    # ── per-key painter ──
+
+    def _build_key_painter(self, matrix):
+        group = Adw.PreferencesGroup(title="Per-key colours",
+                                     description="Pick a paint colour, then click keys. Click a painted key again "
+                                                 "to give it the “other keys” colour.")
+        brush_row = Adw.ActionRow(title="Paint colour")
+        self.brush = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False), valign=Gtk.Align.CENTER)
+        self.brush.set_rgba(_rgba(255, 140, 0))
+        brush_row.add_suffix(self.brush)
+        clear = Gtk.Button(label="Clear all", valign=Gtk.Align.CENTER, css_classes=["flat"])
+        clear.connect("clicked", lambda *_: self._paint_all_clear())
+        brush_row.add_suffix(clear)
+        group.add(brush_row)
+
+        grid = Gtk.Grid(row_spacing=6, column_spacing=6, halign=Gtk.Align.CENTER, margin_top=10, margin_bottom=10)
+        labels = {"wheel_click": "Wheel", "space": "20"}
+        for key, (r, c) in sorted(matrix.items(), key=lambda kv: kv[1]):
+            b = Gtk.Button(label=labels.get(key, key.removeprefix("key")), css_classes=["pk-key", f"pk-{key}"])
+            b.set_size_request(58, 44)
+            b.connect("clicked", lambda _b, k=key: self._paint(k))
+            grid.attach(b, c, r, 1, 1)
+            self.key_buttons[key] = b
+        frame = Gtk.Frame(child=grid, css_classes=["view"])
+        group.add(frame)
+        self.add(group)
+        self.keys_group = group
+        self._key_css = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self._key_css,
+                                                  Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1)
+        self._show_key_colours()
+
+    def _base(self) -> list[int]:
+        return list(_rgb(self.color_btns[0].get_rgba())) if self.color_btns else [0, 0, 0]
+
+    def _show_key_colours(self):
+        if not self.key_buttons:
+            return
+        css = []
+        base = self._base()
+        for key in self.key_buttons:
+            r, g, b = self.key_colours.get(key, base)
+            fg = "#000" if (r * 299 + g * 587 + b * 114) / 1000 > 140 else "#fff"
+            css.append(f"button.pk-{key} {{ background: rgb({r},{g},{b}); color: {fg}; "
+                       f"border: 1px solid rgba(255,255,255,0.18); font-weight: 600; }}")
+        self._key_css.load_from_string("\n".join(css))
+
+    def _paint(self, key):
+        colour = list(_rgb(self.brush.get_rgba()))
+        if self.key_colours.get(key) == colour:
+            self.key_colours.pop(key)  # second click: back to the "other keys" colour
+        else:
+            self.key_colours[key] = colour
+        self._key_colours_changed()
+
+    def _paint_all_clear(self):
+        self.key_colours.clear()
+        self._key_colours_changed()
+
+    def _key_colours_changed(self):
+        self._show_key_colours()
+        if self.effects[self.effect_row.get_selected()][0] != "lighting_custom":
+            idx = next(i for i, e in enumerate(self.effects) if e[0] == "lighting_custom")
+            self.effect_row.set_selected(idx)  # painting switches to per-key lighting (applies it too)
+            return
+        if self._key_timer:
+            GLib.source_remove(self._key_timer)
+
+        def send():
+            self._key_timer = 0
+            self._apply_effect()
+            return False
+
+        self._key_timer = GLib.timeout_add(120, send)
+
     def _update_rows(self):
         cap, _label, ncolors, extra = self.effects[self.effect_row.get_selected()]
+        if self.keys_group is not None:
+            self.keys_group.set_visible(cap == "lighting_custom")
+        if self.color_rows:
+            self.color_rows[0].set_title("Other keys" if cap == "lighting_custom" else "Colour")
         for i, row in enumerate(self.color_rows):
             row.set_visible(i < ncolors)
         opts = self._options()
@@ -228,6 +318,12 @@ class LightingPage(Adw.PreferencesPage):
         fx = self.razer.fx
         name = cap.removeprefix("lighting_")
         try:
+            if name == "custom":
+                keys = dict(self.key_colours)
+                self.razer.set_key_colours(keys, c1)
+                self._show_key_colours()
+                self._changed()
+                return
             if name in ("static", "breath_single", "ripple"):
                 getattr(fx, name)(*c1)
             elif name == "breath_dual":
