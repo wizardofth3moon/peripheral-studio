@@ -48,9 +48,27 @@ class PerformancePage(Adw.PreferencesPage):
             self.dpi_row.set_subtitle("Same on both axes")
             self.dpi_row.connect("notify::value", self._on_dpi)
             group.add(self.dpi_row)
-            self.stages_row = Adw.ActionRow(title="DPI stages", subtitle="Set on the mouse with its DPI buttons")
-            group.add(self.stages_row)
             self.add(group)
+
+            # DPI stages: what the DPI buttons step through (bind them to "DPI" in Customize)
+            self.stages_group = Adw.PreferencesGroup(title="DPI stages",
+                                                     description="What a button bound to “DPI: next / previous "
+                                                                 "stage” steps through. Stored on the mouse.")
+            self.stage_rows = []
+            for i in range(5):
+                row = Adw.SpinRow.new_with_range(100, max_dpi, 50)
+                row.set_title(f"Stage {i + 1}")
+                row.connect("notify::value", lambda *_: self._on_stages())
+                self.stages_group.add(row)
+                self.stage_rows.append(row)
+            self.stage_count_row = Adw.SpinRow.new_with_range(1, 5, 1)
+            self.stage_count_row.set_title("Number of stages")
+            self.stage_count_row.connect("notify::value", lambda *_: (self._show_stage_count(), self._on_stages()))
+            self.stages_group.add(self.stage_count_row)
+            self._stages_timer = 0
+            self._active_stage = 1
+            self.stages_group.set_visible(False)
+            self.add(self.stages_group)
         else:
             self.dpi_row = None
 
@@ -115,9 +133,14 @@ class PerformancePage(Adw.PreferencesPage):
                 self.dpi_row.set_value(dpi[0])
             active, stages = _try(lambda: r.dpi_stages, (0, [])) or (0, [])
             if stages:
-                text = "  ".join((f"[{x}]" if i + 1 == active else str(x)) for i, (x, _y) in enumerate(stages))
-                self.stages_row.set_subtitle(text)
-            self.stages_row.set_visible(bool(stages))
+                self._active_stage = max(1, active)
+                self.stage_count_row.set_value(len(stages))
+                for row, (x, _y) in zip(self.stage_rows, stages):
+                    row.set_value(x)
+                self._show_stage_count()
+                editable = hasattr(r, "set_dpi_stages")
+                self.stages_group.set_sensitive(editable and not asleep)
+            self.stages_group.set_visible(bool(stages))
 
         if self.poll_row:
             rate = _try(lambda: r.poll_rate)
@@ -143,6 +166,30 @@ class PerformancePage(Adw.PreferencesPage):
             if low:
                 self.low_row.set_value(low)
         self._loading = False
+
+    def _show_stage_count(self):
+        n = int(self.stage_count_row.get_value())
+        for i, row in enumerate(self.stage_rows):
+            row.set_visible(i < n)
+            row.set_subtitle("Active" if i + 1 == self._active_stage else "")
+
+    def _on_stages(self):
+        if self._loading:
+            return
+        if self._stages_timer:
+            GLib.source_remove(self._stages_timer)
+
+        def write():
+            self._stages_timer = 0
+            n = int(self.stage_count_row.get_value())
+            stages = [(int(r.get_value()),) * 2 for r in self.stage_rows[:n]]
+            try:
+                self.razer.set_dpi_stages(stages, min(self._active_stage, n))
+            except Exception as ex:
+                self.window.toast(f"Couldn't set DPI stages: {ex}")
+            return False
+
+        self._stages_timer = GLib.timeout_add(400, write)
 
     def _on_dpi(self, row, *_):
         if self._loading:

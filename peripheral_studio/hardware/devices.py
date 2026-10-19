@@ -312,6 +312,17 @@ class NagaV2HyperSpeed(NativeDevice):
             stages.append((a[o + 1] << 8 | a[o + 2], a[o + 3] << 8 | a[o + 4]))
         return active, stages
 
+    def set_dpi_stages(self, stages: list[tuple[int, int]], active: int = 1):
+        """Up to 5 stages, (x, y) each; `active` is 1-based. Entries carry 1-based stage numbers, as the
+        mouse reports them."""
+        stages = [(max(100, min(self.max_dpi, int(x))), max(100, min(self.max_dpi, int(y)))) for x, y in stages[:5]]
+        if not stages:
+            raise ValueError("at least one DPI stage is needed")
+        args = bytearray([VARSTORE, max(1, min(len(stages), int(active))), len(stages)])
+        for i, (x, y) in enumerate(stages, 1):
+            args += bytes([i, x >> 8, x & 0xFF, y >> 8, y & 0xFF, 0, 0])
+        self.cmd(0x04, 0x06, 0x26, bytes(args))
+
     @property
     def poll_rate(self) -> int:
         a = self._read(0x00, 0x85, 0x01)
