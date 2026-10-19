@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import collections
 import json
+import threading
 import time
 import logging
 import os
@@ -84,6 +85,7 @@ class Engine:
         self.recent: collections.deque = collections.deque(maxlen=50)
         self._rescan_handle = None
         self.batteries = None  # hardware.batteries.Batteries, started in run()
+        self._lighting_applied: dict[str, dict] = {}  # device id -> lighting last applied from a profile
 
     # ── Devices ──────────────────────────────────────────────────────────────
 
@@ -166,6 +168,26 @@ class Engine:
         if not quiet:
             log.info("%s: profile %r (%d bindings)", device.name, name,
                      len(device.profile.bindings) if device.profile else 0)
+        self._apply_lighting(device)
+
+    def _apply_lighting(self, device: Device) -> None:
+        """A profile can carry its own lighting ("lighting" in its file); switching to it applies it.
+        Profiles without lighting leave the device as it is."""
+        lighting = device.profile.extra.get("lighting") if device.profile else None
+        if not lighting or self._lighting_applied.get(device.id) == lighting:
+            return
+        self._lighting_applied[device.id] = lighting
+
+        def work():
+            try:
+                from ..hardware import lighting as lmod
+                dev = lmod.driver_for(device.id)
+                if dev is not None:
+                    lmod.apply(dev, lighting)
+            except Exception as ex:
+                log.warning("%s: couldn't apply the profile's lighting: %s", device.name, ex)
+
+        threading.Thread(target=work, name="lighting", daemon=True).start()
 
     def _apply_grab(self, device: Device) -> None:
         want = bool(device.state and device.state.enabled and device.profile and device.profile.bindings)

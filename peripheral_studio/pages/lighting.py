@@ -3,6 +3,9 @@ from __future__ import annotations
 
 from gi.repository import Adw, Gdk, GLib, Gtk
 
+from ..engine import client, model
+from ..util import run_bg
+
 # (capability, label, colours used, extra option)
 EFFECTS = [
     ("lighting_static", "Static", 1, None),
@@ -90,12 +93,79 @@ class LightingPage(Adw.PreferencesPage):
                                          description="The small LEDs that show which profile is active")
             for c in leds:
                 row = Adw.SwitchRow(title=f"{c.title()} LED")
-                row.connect("notify::active", lambda r, c=c: self._loading or setattr(self.razer, f"profile_led_{c}", r.get_active()))
+                row.connect("notify::active", lambda r, c=c: self._loading or (
+                    setattr(self.razer, f"profile_led_{c}", r.get_active()), self._changed()))
                 group.add(row)
                 self.led_rows[c] = row
             self.add(group)
 
+        # Lighting saved with the active profile (native driver only: it can snapshot the effect)
+        self.profile_name = None
+        self._save_timer = 0
+        if getattr(self.razer, "backend", None) == "native":
+            group = Adw.PreferencesGroup(title="Profile")
+            self.profile_row = Adw.SwitchRow(title="Save with the active profile",
+                                             subtitle="Switching to that profile brings this lighting back")
+            self.profile_row.connect("notify::active", self._on_profile_toggle)
+            group.add(self.profile_row)
+            self.add(group)
+            self.device = device
+            run_bg(lambda: client.call("status", timeout=1.0), self._show_profile)
+        else:
+            self.profile_row = None
+
         self._load()
+
+    # ── lighting saved per profile ──
+
+    def _show_profile(self, status):
+        if isinstance(status, Exception):
+            self.profile_row.set_subtitle("Start remapping (Customize tab) to save lighting with a profile")
+            self.profile_row.set_sensitive(False)
+            return
+        entry = next((d for d in status.get("devices", []) if d["id"] == self.device.id), None)
+        self.profile_name = entry and entry.get("profile")
+        if not self.profile_name:
+            self.profile_row.set_sensitive(False)
+            return
+        self.profile_row.set_title(f"Save with profile “{self.profile_name}”")
+        profile = model.Profile.load(self.device.id, self.profile_name)
+        was, self._loading = self._loading, True
+        self.profile_row.set_active("lighting" in profile.extra)
+        self._loading = was
+
+    def _store(self, include: bool):
+        """Writes (or removes) the current lighting in the active profile's file."""
+        from ..hardware import lighting
+
+        def work():
+            profile = model.Profile.load(self.device.id, self.profile_name)
+            if include:
+                profile.extra["lighting"] = lighting.capture(self.razer)
+            else:
+                profile.extra.pop("lighting", None)
+            profile.save()
+            client.call("reload", device=self.device.id)
+
+        run_bg(work, lambda r: isinstance(r, Exception) and self.window.toast(f"Couldn't save lighting: {r}"))
+
+    def _on_profile_toggle(self, row, *_):
+        if not self._loading and self.profile_name:
+            self._store(row.get_active())
+
+    def _changed(self):
+        """After any lighting change: keep the profile's copy current (debounced)."""
+        if self._loading or not self.profile_row or not self.profile_row.get_active():
+            return
+        if self._save_timer:
+            GLib.source_remove(self._save_timer)
+
+        def save():
+            self._save_timer = 0
+            self._store(True)
+            return False
+
+        self._save_timer = GLib.timeout_add(600, save)
 
     def _load(self):
         self._loading = True
@@ -174,6 +244,7 @@ class LightingPage(Adw.PreferencesPage):
                 fx.wave(opt or 1)
             else:  # spectrum, breath_random, ripple_random, none
                 getattr(fx, name)()
+            self._changed()
         except Exception as ex:
             self.window.toast(f"Couldn't set lighting: {ex}")
 
@@ -188,6 +259,7 @@ class LightingPage(Adw.PreferencesPage):
             self._brightness_timer = 0
             try:
                 self.razer.brightness = scale.get_value()
+                self._changed()
             except Exception as ex:
                 self.window.toast(f"Couldn't set brightness: {ex}")
             return False
