@@ -1,0 +1,14 @@
+[Unit]
+Description=Peripheral Studio remap engine
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/peripheral-studio
+ExecStart=/usr/bin/python3 -W ignore -m peripheral_studio.engine
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

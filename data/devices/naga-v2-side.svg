@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="130 296 860 356" width="1720" height="712">
+  <!-- Peripheral Studio original artwork: a simplified left-side view of an MMO mouse with a
+       4 x 3 thumb grid, fitted by hand to landmarks in a reference photo (not included). -->
+  <defs>
+    <linearGradient id="shell" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34363b"/><stop offset="0.35" stop-color="#1f2023"/><stop offset="1" stop-color="#121315"/>
+    </linearGradient>
+  </defs>
+  <path d="M140 480 C200 440 260 402 330 373 C430 331 540 307 640 307 C770 307 905 362 975 490
+           C980 520 962 598 922 630 C906 641 890 643 870 643 L262 643 C232 643 216 631 206 612
+           L156 528 L140 514 Z" fill="url(#shell)" stroke="#43464d" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M150 512 C300 440 500 352 690 343 C820 340 920 420 974 492" fill="none" stroke="#2c2e33" stroke-width="3"/>
+  <ellipse cx="332" cy="386" rx="34" ry="17" fill="#0f1012" stroke="#30333a" stroke-width="2"/>
+  <path d="M414 395 Q416 382 430 380 L708 360 Q724 359 728 374 L752 586 Q754 602 738 604 L462 624 Q446 625 444 610 Z"
+        fill="#0f1012" stroke="#30333a" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M240 628 L900 628" stroke="#44d62c" stroke-opacity="0.45" stroke-width="2.5"/>
+</svg>

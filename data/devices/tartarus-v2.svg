@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="60 31 186 246" width="930" height="1230">
+  <!-- Peripheral Studio original artwork: a simplified top view of a 20-key gaming keypad,
+       traced as a plain outline from a reference photo (the photo itself is not included). -->
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#2b2d32"/><stop offset="0.5" stop-color="#1b1c1f"/><stop offset="1" stop-color="#121315"/>
+    </linearGradient>
+    <linearGradient id="rest" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#26282c"/><stop offset="1" stop-color="#141517"/>
+    </linearGradient>
+    <linearGradient id="pad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d1e21"/><stop offset="1" stop-color="#0f1012"/>
+    </linearGradient>
+  </defs>
+  <path d="M165.0 33.0 L189.0 33.0 Q192.0 33.0 193.5 34.5 L193.5 34.5 Q195.0 36.0 195.0 39.0 L195.0 72.0 Q195.0 75.0 197.0 77.0 L197.0 77.0 Q199.0 79.0 201.0 77.5 L201.0 77.5 Q203.0 76.0 206.0 76.0 L210.0 76.0 Q213.0 76.0 215.0 77.5 L215.0 77.5 Q217.0 79.0 219.2 81.0 L228.8 90.0 Q231.0 92.0 231.7 94.9 L234.3 106.1 Q235.0 109.0 235.1 112.0 L235.9 156.0 Q236.0 159.0 234.9 161.8 L234.1 164.2 Q233.0 167.0 230.9 169.1 L229.1 170.9 Q227.0 173.0 229.2 175.1 L240.8 185.9 Q243.0 188.0 243.0 189.5 L243.0 189.5 Q243.0 191.0 240.8 193.0 L218.2 213.0 Q216.0 215.0 213.5 215.0 L213.5 215.0 Q211.0 215.0 209.1 212.6 L197.9 198.4 Q196.0 196.0 194.0 198.0 L194.0 198.0 Q192.0 200.0 192.1 203.0 L192.9 251.0 Q193.0 254.0 192.1 256.8 L191.9 257.2 Q191.0 260.0 188.9 262.1 L186.1 264.9 Q184.0 267.0 181.2 268.1 L176.8 269.9 Q174.0 271.0 171.0 271.3 L151.0 273.7 Q148.0 274.0 145.0 273.9 L121.0 273.1 Q118.0 273.0 115.0 272.5 L97.0 269.5 Q94.0 269.0 91.3 267.8 L87.7 266.2 Q85.0 265.0 82.9 262.9 L78.1 258.1 Q76.0 256.0 74.8 253.3 L73.2 249.7 Q72.0 247.0 72.0 244.0 L72.0 236.0 Q72.0 233.0 72.7 230.1 L74.3 222.9 Q75.0 220.0 75.8 217.1 L81.2 196.9 Q82.0 194.0 83.1 191.2 L89.9 172.8 Q91.0 170.0 89.1 167.6 L77.9 153.4 Q76.0 151.0 75.5 149.0 L75.5 149.0 Q75.0 147.0 74.6 144.0 L62.4 50.0 Q62.0 47.0 63.5 45.5 L63.5 45.5 Q65.0 44.0 68.0 43.5 L93.0 39.5 Q96.0 39.0 99.0 38.7 L141.0 34.3 Q144.0 34.0 147.0 34.0 L158.0 34.0 Q161.0 34.0 161.5 33.5 L161.5 33.5 Q162.0 33.0 165.0 33.0 Z" fill="url(#body)" stroke="#43464d" stroke-width="1.2" stroke-linejoin="round"/>
+  <!-- key deck -->
+  <path d="M66 49 Q65 45 69 44.5 L96 40.5 L144 36 L190 36.5 Q193 37 193 40 L193 148 Q193 151 190 151
+           L80 152 Q77 152 76.5 149 Z" fill="#17181b" stroke="#2f3237" stroke-width="0.8"/>
+  <!-- palm rest -->
+  <path d="M90 171 C100 152 168 146 188 157 Q192 160 192 166 L192 252 Q191 262 178 268 C160 274 108 274 92 268
+           Q76 262 74 246 Q74 228 80 205 Z" fill="url(#rest)" stroke="#30333a" stroke-width="0.8"/>
+  <path d="M80 222 Q120 214 190 220 L190 252 Q189 262 177 267 C160 272 108 272 93 267 Q78 261 77 246 Z"
+        fill="url(#pad)" stroke="#2a2c31" stroke-width="0.6"/>
+  <path d="M100 262 Q134 268 170 262" fill="none" stroke="#44d62c" stroke-opacity="0.55" stroke-width="1"
+        stroke-linecap="round"/>
+  <!-- scroll wheel slot -->
+  <rect x="173" y="113" width="17" height="34" rx="6" fill="#0d0e10" stroke="#34373d" stroke-width="0.7"/>
+  <!-- thumb module: profile LEDs, thumbpad, paddle -->
+  <circle cx="217" cy="103" r="1.6" fill="#ff8a1f"/>
+  <circle cx="217" cy="111" r="1.6" fill="#2fe04a"/>
+  <circle cx="217" cy="119" r="1.6" fill="#1fb5ff"/>
+  <circle cx="226.5" cy="161" r="13.5" fill="#101113" stroke="#34373d" stroke-width="0.8"/>
+  <path d="M200.5 194.5 L228 175.5 L243 189 L214.5 213 Z" fill="#131416" stroke="#3a3d43" stroke-width="0.8"
+        stroke-linejoin="round"/>
+</svg>

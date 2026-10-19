@@ -1,0 +1,7 @@
+# Peripheral Studio: lets the logged-in user send settings (lighting, DPI, polling rate, battery)
+# to Razer devices through hidraw, and read/grab their input nodes for remapping.
+# Install: sudo cp 70-peripheral-studio.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1532", TAG+="uaccess"
+SUBSYSTEM=="input", ATTRS{idVendor}=="1532", TAG+="uaccess"
+# the remap engine's virtual keyboard and mouse
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
