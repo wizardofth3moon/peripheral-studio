@@ -26,6 +26,19 @@ ICONS = {"mouse": "input-mouse-symbolic", "keypad": "input-gaming-symbolic",
 KIND_LABEL = {"mouse": "Mouse", "keypad": "Keypad", "keyboard": "Keyboard", "headset": "Headset"}
 
 
+
+def device_access_ok() -> bool:
+    """Whether this user can use the Razer HID nodes and the remap engine's virtual devices."""
+    razer = []
+    for node in Path("/sys/class/hidraw").glob("hidraw*"):
+        try:
+            if ":1532:" in (node / "device").resolve().name.upper():
+                razer.append(f"/dev/{node.name}")
+        except OSError:
+            continue
+    nodes = razer[:1] + [p for p in ("/dev/uinput",) if os.path.exists(p)]
+    return all(os.access(p, os.R_OK | os.W_OK) for p in nodes)
+
 class Window(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="Peripheral Studio", default_width=1440, default_height=820)
@@ -64,6 +77,11 @@ class Window(Adw.ApplicationWindow):
         self.switcher = Adw.ViewSwitcher(policy=Adw.ViewSwitcherPolicy.WIDE)
         self.content_head.set_title_widget(self.switcher)
         self.content.add_top_bar(self.content_head)
+        # First run: the devices need a one-time udev rule before the app and engine can use them
+        self.access_banner = Adw.Banner(title="Peripheral Studio needs permission to use your Razer devices",
+                                        button_label="Grant access", revealed=not device_access_ok())
+        self.access_banner.connect("button-clicked", lambda *_: self.grant_access())
+        self.content.add_top_bar(self.access_banner)
         self.content.set_content(Adw.StatusPage(icon_name="input-gaming-symbolic", title="Looking for devices…"))
         self.split.set_content(Adw.NavigationPage(title="Device", child=self.content))
 
@@ -133,6 +151,25 @@ class Window(Adw.ApplicationWindow):
         row = self.device_list.get_selected_row()
         if row is not None:
             self._on_device_selected(self.device_list, row)
+
+    def grant_access(self):
+        """Runs the system setup (udev rule, uhid/uinput) behind the desktop's password prompt."""
+        import subprocess
+        script = DATA / "install-system.sh"
+
+        def run():
+            return subprocess.run(["pkexec", str(script)], capture_output=True, text=True)
+
+        def done(r):
+            if isinstance(r, Exception) or r.returncode != 0:
+                msg = r if isinstance(r, Exception) else (r.stderr.strip().splitlines() or ["cancelled"])[-1]
+                self.toast(f"Device access wasn't set up: {msg}")
+                return
+            self.access_banner.set_revealed(not device_access_ok())
+            self.toast("Device access granted. Unplug and replug a device if it still isn't found.")
+            self.load_devices()
+
+        run_bg(run, done)
 
     def toast(self, text):
         self.toasts.add_toast(Adw.Toast(title=GLib.markup_escape_text(text), timeout=3))

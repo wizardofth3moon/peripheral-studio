@@ -17,7 +17,7 @@ It is self-contained: no OpenRazer and no input-remapper needed.
 peripheral-studio            # or "Peripheral Studio" in the app menu
 ```
 
-**Device access:** the app and the engine need read/write access to the Razer devices. Install the udev rule once, then unplug and replug the devices (or log out and back in):
+**Device access:** the app and the engine need read/write access to the Razer devices. On first start the app offers **Grant access**, which runs the setup below behind the desktop's password prompt. By hand:
 
 ```sh
 sudo cp data/udev/70-peripheral-studio.rules /etc/udev/rules.d/
@@ -59,6 +59,10 @@ A device without a diagram can still be bound with **Find a button**.
 **Profiles:** use **+** to add a profile, and **⋮** to rename, duplicate or delete one. Switching profiles applies the new one immediately while remapping is on.
 
 ## Profiles, lighting and popups
+
+- **Export / import** (profile menu ⋮): a profile as a `.json` file, to back up or share. Imports only into the same device model.
+- **Per-key colours** (Tartarus V2): Lighting → Per key, then paint keys; saved with the profile like other lighting.
+- **DPI stages** (Naga): edited on the Performance page; buttons bound to "DPI: next / previous stage" step through them.
 
 - **Lighting with a profile:** on the Lighting page, turn on "Save with profile …". Switching to that profile (by hand, from a button, or by app) then brings its lighting back. Profiles without saved lighting leave the lighting alone.
 - **On-screen popups** for profile switches, DPI changes and Hypershift use GNOME's own on-screen display through the bundled extension `data/gnome-shell/peripheral-studio-osd@peripheral-studio` (copy it to `~/.local/share/gnome-shell/extensions/` and enable it; on Wayland it appears after logging in again). Without it they show as short notifications. Turn kinds off in `~/.config/peripheral-studio/settings.json`: `{"osd": {"profile": false, "dpi": true, "hypershift": false}}`.
