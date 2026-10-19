@@ -31,7 +31,7 @@ sudo udevadm control --reload && sudo udevadm trigger
 | Naga V2 HyperSpeed | Top buttons, wheel, 12 side buttons | No (it has no RGB) | DPI, polling rate, battery, sleep timer |
 | Tartarus V2 | Keys 01–19, thumb buttons, D-pad, wheel | Effects, brightness, profile LEDs | — |
 | Ornata V3 X | Full keyboard and navigation keys | Effects, brightness | — |
-| BlackShark V3 | Mic mute, volume, media keys | — (no settings driver yet) | — |
+| BlackShark V3 | Mic mute, volume, media keys | — | Audio page: EQ presets and bands, THX Spatial, ultra-low latency, mic EQ, sidetone, game/chat balance, call mixing, function button, auto power-off, voice prompts, dongle light; battery |
 
 A device without a diagram can still be bound with **Find a button**.
 
@@ -61,6 +61,7 @@ A device without a diagram can still be bound with **Find a button**.
 
 - **Left click can't be remapped** on the base layer, so you can't lose your main click.
 - **Lighting is per device, not per profile** yet, and custom per-key colours aren't supported.
+- **The BlackShark V3 needs the `razer-cfg255` kernel module** (in `third_party/`) until the matching usbcore quirk is in the kernel: without it the headset never enables its settings channel. Its active EQ preset can't be read back, so the app remembers the last one chosen.
 - **The Naga V2 HyperSpeed has no lighting** (it has no RGB), and its settings are unavailable while the mouse sleeps.
 
 ## Debugging
