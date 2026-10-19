@@ -49,9 +49,11 @@ def find_hidraw() -> tuple[str, int] | None:
     return None
 
 
-def frame(cls: int, direction: int = 0x80, args: bytes = b"") -> bytes:
+def frame(cls: int, direction: int = 0x80, args: bytes = b"", count: int | None = None) -> bytes:
+    """count overrides byte 12 (the argument count): a few commands carry a selector there instead."""
     b = bytearray(REPORT_LEN)
-    b[0], b[2], b[6], b[9], b[10], b[12] = REPORT_ID, 0x60, 4 + len(args), direction, cls, len(args)
+    b[0], b[2], b[6], b[9], b[10] = REPORT_ID, 0x60, 4 + len(args), direction, cls
+    b[12] = len(args) if count is None else count
     b[13:13 + len(args)] = args
     x = 0
     for v in b[:62]:
@@ -147,3 +149,142 @@ class BlackSharkV3:
             since = time.monotonic() - self._asked_at
             if (self._asked_at == 0.0 and since > 1) or (self.percent is None and since > MIN_QUERY_GAP):
                 self._ask()
+
+
+# ── Settings (EQ, mic, sidetone, ...) ───────────────────────────────────────────
+# Each setting has a setter class and a getter class (setter - 0x80), verified on a V3
+# dongle by changing every value and reading it back (2026-10-19).
+
+EQ_PRESETS = ["Default", "Game", "Movie", "Music", "Esports"]
+EQ_BANDS_HZ = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
+# factory band gains (dB) per preset, from Synapse captures (OpenRazer PR #2794)
+EQ_FACTORY = [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [2, 2, 5, 5, 1, -1, 2, 3, 3, 3],
+    [3, 3, 3, -1, -4, -4, 2, 3, 3, 3],
+    [2, 2, 0, 0, 1, -1, -1, 3, 3, 3],
+    [1, 1, -1, 0, 2, 0, 4, 4, 4, -3],
+]
+_EQ_APPLY = [(0x00, 0x00, 0x01), (0x01, 0x01, 0x01), (0x03, 0x03, 0x01), (0x02, 0x02, 0x01), (0x04, 0x0A, 0x00)]
+MIC_PRESETS = ["Default", "Mic boost", "Broadcast", "Esports"]  # 0x20 + index
+POWER_OFF = [0, 15, 30, 45, 60]  # minutes, 0 = never
+IN_CALL = ["Mix 2.4 GHz and Bluetooth", "Lower 2.4 GHz volume", "Mute 2.4 GHz"]
+FN_BUTTON = ["Game/chat balance", "Sidetone", "Footstep boost", "Bluetooth volume"]
+DONGLE_LED = ["Connection status", "Battery level", "Battery warnings only"]
+
+
+def _gain(db: int) -> int:
+    db = max(-6, min(6, int(db)))
+    return 0x80 | -db if db < 0 else db
+
+
+class BlackSharkControl:
+    """Reads and changes the headset's settings. Short-lived: open, use, close."""
+
+    def __init__(self):
+        found = find_hidraw()
+        if not found:
+            raise OSError("BlackShark V3 not connected")
+        self.path, self.product = found
+        self.direction = 0x80 if self.product == 0x057A else 0x00  # through the dongle / over the cable
+        self.fd = os.open(self.path, os.O_RDWR | os.O_NONBLOCK | os.O_CLOEXEC)
+        for cls, d in ((INIT, 0x00), (CHARGING, 0x00), (CHARGING, 0x80)):
+            self._write(frame(cls, d))
+            time.sleep(0.003)
+        self._replies(0.2)
+
+    def close(self):
+        os.close(self.fd)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+    def _write(self, data: bytes):
+        os.write(self.fd, data)
+
+    def _replies(self, wait: float, cls: int | None = None) -> list[bytes]:
+        end, out = time.monotonic() + wait, []
+        while time.monotonic() < end:
+            r, _, _ = select.select([self.fd], [], [], max(0.0, end - time.monotonic()))
+            if not r:
+                break
+            try:
+                d = os.read(self.fd, REPORT_LEN)
+            except BlockingIOError:
+                continue
+            if len(d) > 13 and d[0] == REPORT_ID and (cls is None or d[10] == cls):
+                out.append(d)
+                if cls is not None:
+                    break
+        return out
+
+    def get(self, cls: int) -> bytes | None:
+        """The values a getter class answers with, or None when the headset doesn't answer."""
+        self._write(frame(cls, self.direction))
+        got = self._replies(0.3, cls)
+        if not got or got[0][13] == 0xFF and got[0][12] == 1:  # 0xff: "not ready" (link still coming up)
+            return None
+        n = max(1, got[0][12])
+        return bytes(got[0][13:13 + n])
+
+    def _set(self, cls: int, args: bytes, count: int | None = None):
+        self._write(frame(cls, self.direction, args, count))
+        time.sleep(0.03)
+
+    def read_all(self) -> dict:
+        def one(cls, i=0):
+            v = self.get(cls)
+            return v[i] if v and len(v) > i else None
+        mic = one(0x16)
+        power = one(0x2C)
+        return {
+            "sidetone": one(0x19), "mic_preset": None if mic is None else mic - 0x20,
+            "power_off": power, "thx": one(0x1E), "balance": one(0x5C), "in_call": one(0x5D),
+            "prompts": one(0x65, 1), "fn_button": one(0x6A), "low_latency": one(0x5F), "led": one(0x66),
+        }
+
+    def set_sidetone(self, level: int):
+        self._set(0x98, b"\x01")
+        self._set(0x99, bytes([max(0, min(15, int(level)))]))
+
+    def set_mic_preset(self, index: int):
+        self._set(0x96, bytes([0x20 + max(0, min(3, int(index)))]))
+
+    def set_power_off(self, minutes: int):
+        self._set(0xAC, bytes([min(POWER_OFF, key=lambda m: abs(m - int(minutes)))]))
+
+    def set_thx(self, on: bool):
+        self._set(0x9E, b"\x01" if on else b"\x00")
+
+    def set_balance(self, value: int):
+        """0 = all game, 10 = centre, 20 = all chat."""
+        self._set(0xDC, bytes([max(0, min(20, int(value))), 0]), count=1)
+
+    def set_in_call(self, mode: int):
+        self._set(0xDD, bytes([max(0, min(2, int(mode))), 0]), count=1)
+
+    def set_prompts(self, on: bool):
+        self._set(0xE5, bytes([0, 1 if on else 0, 0]), count=2)
+
+    def set_fn_button(self, mode: int):
+        self._set(0xEA, bytes([max(0, min(3, int(mode)))]))
+
+    def set_low_latency(self, on: bool):
+        self._set(0xDF, b"\x01" if on else b"\x00")
+
+    def set_led(self, mode: int):
+        self._set(0xE6, bytes([max(0, min(2, int(mode)))]))
+
+    def set_eq(self, preset: int, bands: list[int] | None = None):
+        """Writes a preset's 10 bands (its factory ones unless given) and makes it the active EQ."""
+        p = max(0, min(4, int(preset)))
+        gains = bytes(_gain(b) for b in (bands if bands is not None else EQ_FACTORY[p]))
+        a14, a17, a18 = _EQ_APPLY[p]
+        self._set(0xE1, b"\x01")  # begin
+        self._set(0x95, bytes([p]) + gains)  # bands
+        self._set(0xE0, bytes([p, a14, 1, 1, a17, a18]))  # apply
+        self._set(0xE1, b"\x02")  # end
+        self._set(0xEB, bytes([p, 0, 0, 1, 1]) + bytes(6), count=0x0B)  # commit

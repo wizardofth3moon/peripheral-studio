@@ -16,6 +16,7 @@ from .engine import client  # noqa: E402
 from .pages.customize import CustomizePage  # noqa: E402
 from .pages.lighting import LightingPage, has_lighting  # noqa: E402
 from .pages.performance import PerformancePage, has_performance, has_power  # noqa: E402
+from .pages.audio import AudioPage, has_audio  # noqa: E402
 from .util import run_bg  # noqa: E402
 
 APP_ID = "com.herd.PeripheralStudio"
@@ -176,6 +177,8 @@ class Window(Adw.ApplicationWindow):
         stack.add_titled_with_icon(self.customize, "customize", "Customize", "input-keyboard-symbolic")
         if device.razer is not None and has_lighting(device):
             stack.add_titled_with_icon(LightingPage(self, device), "lighting", "Lighting", "weather-clear-symbolic")
+        if has_audio(device):
+            stack.add_titled_with_icon(AudioPage(self, device), "audio", "Audio", "audio-headphones-symbolic")
         if device.razer is not None and (has_performance(device) or has_power(device)):
             stack.add_titled_with_icon(PerformancePage(self, device), "performance", "Performance",
                                        "power-profile-performance-symbolic")
