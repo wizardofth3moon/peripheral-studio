@@ -40,6 +40,28 @@ def _save_eq(preset: int, bands: dict):
     STATE_FILE.write_text(json.dumps(data, indent=1))
 
 
+def _load_originals() -> dict[int, list[int]]:
+    try:
+        s = json.loads(STATE_FILE.read_text()).get(STATE_KEY, {})
+    except (OSError, ValueError):
+        return {}
+    return {int(k): v for k, v in s.get("eq_original", {}).items()}
+
+
+def _remember_originals(curves: dict[int, list[int]]):
+    """Keeps each preset's curve as first seen on the headset, for "Reset"."""
+    try:
+        data = json.loads(STATE_FILE.read_text())
+    except (OSError, ValueError):
+        data = {}
+    known = data.setdefault(STATE_KEY, {}).setdefault("eq_original", {})
+    added = {str(k): v for k, v in curves.items() if str(k) not in known}
+    if added:
+        known.update(added)
+        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        STATE_FILE.write_text(json.dumps(data, indent=1))
+
+
 class AudioPage(Adw.PreferencesPage):
     def __init__(self, window, device):
         super().__init__()
@@ -47,6 +69,7 @@ class AudioPage(Adw.PreferencesPage):
         self._loading = True
         self._timers: dict[str, int] = {}
         self.eq_preset, self.eq_custom = _load_eq()
+        self.eq_stored: dict[int, list[int]] = {}  # each preset's curve as stored on the headset
 
         # ── shown while the headset doesn't answer ──
         self.banner_group = Adw.PreferencesGroup()
@@ -89,7 +112,7 @@ class AudioPage(Adw.PreferencesPage):
             box.append(col)
             self.band_scales.append(scale)
         self.bands_row.add_row(box)
-        reset = Gtk.Button(label="Reset to factory", halign=Gtk.Align.END, margin_end=10, margin_bottom=8,
+        reset = Gtk.Button(label="Reset preset", halign=Gtk.Align.END, margin_end=10, margin_bottom=8,
                            css_classes=["flat"])
         reset.connect("clicked", self._on_reset_bands)
         self.bands_row.add_row(reset)
@@ -189,7 +212,8 @@ class AudioPage(Adw.PreferencesPage):
             go()
 
     def _bands(self, preset: int) -> list[int]:
-        return list(self.eq_custom.get(preset, bs.EQ_FACTORY[preset]))
+        stored = getattr(self, "eq_stored", {}).get(preset)
+        return list(self.eq_custom.get(preset) or stored or bs.EQ_FACTORY[preset])
 
     def _show_bands(self):
         was, self._loading = self._loading, True
@@ -198,7 +222,8 @@ class AudioPage(Adw.PreferencesPage):
         self._loading = was
 
     def _send_eq(self, delay=0):
-        preset, bands = self.eq_preset, self._bands(self.eq_preset)
+        preset = self.eq_preset
+        bands = self.eq_custom.get(preset)  # None: keep the curve stored on the headset
         _save_eq(self.eq_preset, self.eq_custom)
         self._write("eq", lambda h: h.set_eq(preset, bands), delay=delay)
 
@@ -215,10 +240,14 @@ class AudioPage(Adw.PreferencesPage):
         if self._loading:
             return
         self.eq_custom[self.eq_preset] = [int(s.get_value()) for s in self.band_scales]
+        self.eq_stored[self.eq_preset] = self.eq_custom[self.eq_preset]
         self._send_eq(delay=400)
 
     def _on_reset_bands(self, _button):
-        self.eq_custom.pop(self.eq_preset, None)
+        """Back to the preset's curve as it was when Peripheral Studio first read it from the headset."""
+        original = _load_originals().get(self.eq_preset) or bs.EQ_FACTORY[self.eq_preset]
+        self.eq_custom[self.eq_preset] = list(original)
+        self.eq_stored[self.eq_preset] = list(original)
         self._show_bands()
         self._send_eq()
 
@@ -228,6 +257,7 @@ class AudioPage(Adw.PreferencesPage):
         def read():
             with bs.BlackSharkControl() as h:
                 values = h.read_all()
+                values["eq_slots"] = {i: h.eq_bands(i) for i in range(len(bs.EQ_PRESETS))}
             try:
                 values["battery"] = client.call("status", timeout=1.0).get("batteries", {}).get("1532-057a")
             except Exception:
@@ -251,6 +281,9 @@ class AudioPage(Adw.PreferencesPage):
                 self.battery_bar.set_value(b["percent"])
             else:
                 self.battery_row.set_subtitle("Not reported yet")
+            self.eq_stored = {i: b for i, b in (v.get("eq_slots") or {}).items() if b}
+            _remember_originals(self.eq_stored)
+            self.eq_custom = {}  # the headset holds the real curves now: no local overrides needed
             self.eq_row.set_selected(self.eq_preset)
             self._show_bands()
             self.thx_row.set_active(bool(v["thx"]))

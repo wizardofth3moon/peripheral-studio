@@ -157,7 +157,8 @@ class BlackSharkV3:
 
 EQ_PRESETS = ["Default", "Game", "Movie", "Music", "Esports"]
 EQ_BANDS_HZ = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
-# factory band gains (dB) per preset, from Synapse captures (OpenRazer PR #2794)
+# Fallback band gains (dB) per preset, from Synapse captures (OpenRazer PR #2794). The headset's own stored
+# curves win (read with eq_bands()): on a real V3 its Game curve differs from this table.
 EQ_FACTORY = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [2, 2, 5, 5, 1, -1, 2, 3, 3, 3],
@@ -278,10 +279,21 @@ class BlackSharkControl:
     def set_led(self, mode: int):
         self._set(0xE6, bytes([max(0, min(2, int(mode)))]))
 
+    def eq_bands(self, preset: int) -> list[int] | None:
+        """The 10 band gains (dB) stored in a preset slot on the headset."""
+        self._write(frame(0x15, self.direction, bytes([max(0, min(8, int(preset)))])))
+        got = self._replies(0.3, 0x15)
+        if not got or got[0][12] < 11:
+            return None
+        return [-(v & 0x7F) if v & 0x80 else v for v in got[0][14:24]]
+
     def set_eq(self, preset: int, bands: list[int] | None = None):
-        """Writes a preset's 10 bands (its factory ones unless given) and makes it the active EQ."""
+        """Makes a preset the active EQ, writing its 10 bands: the given ones, else the curve already stored on
+        the headset (so choosing a preset never replaces it), else the fallback table."""
         p = max(0, min(4, int(preset)))
-        gains = bytes(_gain(b) for b in (bands if bands is not None else EQ_FACTORY[p]))
+        if bands is None:
+            bands = self.eq_bands(p) or EQ_FACTORY[p]
+        gains = bytes(_gain(b) for b in bands)
         a14, a17, a18 = _EQ_APPLY[p]
         self._set(0xE1, b"\x01")  # begin
         self._set(0x95, bytes([p]) + gains)  # bands
