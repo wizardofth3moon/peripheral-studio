@@ -15,8 +15,9 @@ DEVICES_ART = Path(__file__).resolve().parent.parent.parent / "data" / "devices"
 KINDS = [
     ("default", "Default"), ("keys", "Keyboard"), ("mouse", "Mouse"), ("media", "Media"), ("text", "Text"),
     ("macro", "Macro"), ("turbo", "Turbo"), ("hypershift", "Hypershift"), ("profile", "Profile"),
-    ("disable", "Disable"),
+    ("dpi", "DPI"), ("disable", "Disable"),
 ]
+DPI_STEPS = [("next", "Next DPI stage"), ("previous", "Previous DPI stage"), ("cycle", "Cycle DPI stages")]
 MOUSE = [("BTN_LEFT", "Left click"), ("BTN_RIGHT", "Right click"), ("BTN_MIDDLE", "Middle click"),
          ("BTN_SIDE", "Back (Mouse 4)"), ("BTN_EXTRA", "Forward (Mouse 5)"),
          ("scroll:vertical:1", "Scroll up"), ("scroll:vertical:-1", "Scroll down"),
@@ -573,6 +574,12 @@ class CustomizePage(Gtk.Box):
 
         self.profile_target_dd = Gtk.DropDown()
         self.kind_stack.add_named(self.profile_target_dd, "profile")
+        dpi = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.dpi_step_dd = Gtk.DropDown(model=Gtk.StringList.new([label for _s, label in DPI_STEPS]))
+        dpi.append(self.dpi_step_dd)
+        dpi.append(Gtk.Label(label="Steps through the Naga's DPI stages, with an on-screen popup.", xalign=0, wrap=True,
+                             css_classes=["dim-label", "caption"]))
+        self.kind_stack.add_named(dpi, "dpi")
         self.kind_stack.add_named(note("The button does nothing."), "disable")
 
         apply = Gtk.Button(label="Apply", css_classes=["suggested-action"], margin_top=6)
@@ -693,6 +700,9 @@ class CustomizePage(Gtk.Box):
             kind = "profile"
             self.profile_target_dd.set_selected({"next": 0, "previous": 1}.get(
                 a.target, names.index(a.target) if a.target in names else 0))
+        elif isinstance(a, model.DpiAction):
+            kind = "dpi"
+            self.dpi_step_dd.set_selected(next((i for i, (st, _l) in enumerate(DPI_STEPS) if st == a.step), 0))
         elif isinstance(a, model.DisableAction):
             kind = "disable"
         # A Hypershift key on the Hypershift layer could never be released into.
@@ -780,6 +790,8 @@ class CustomizePage(Gtk.Box):
             i = self.profile_target_dd.get_selected()
             item = self.profile_target_dd.get_selected_item()
             return model.ProfileAction(target="next" if i == 0 else "previous" if i == 1 else item.get_string())
+        if kind == "dpi":
+            return model.DpiAction(step=DPI_STEPS[self.dpi_step_dd.get_selected()][0])
         return model.DisableAction()
 
     def _apply_binding(self):

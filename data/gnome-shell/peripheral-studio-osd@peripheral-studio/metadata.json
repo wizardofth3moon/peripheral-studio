@@ -1,0 +1,7 @@
+{
+  "uuid": "peripheral-studio-osd@peripheral-studio",
+  "name": "Peripheral Studio OSD",
+  "description": "Shows Peripheral Studio's profile, DPI and Hypershift changes in GNOME's on-screen display.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "url": ""
+}

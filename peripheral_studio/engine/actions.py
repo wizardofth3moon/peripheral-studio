@@ -142,6 +142,9 @@ class Runner:
             return Task(_macro(out, action), action.mode == "while_held", out)
         if isinstance(action, model.HypershiftAction):
             return engine.hold_hypershift()
+        if isinstance(action, model.DpiAction):
+            engine.step_dpi(action.step)
+            return Running()
         if isinstance(action, model.ProfileAction):
             engine.switch_profile_from(action.device or slot[0], action.target, action.group)
             return Running()

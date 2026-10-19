@@ -327,8 +327,27 @@ class ProfileAction(Action):
         return text + (" (other device)" if self.device else "")
 
 
+@dataclass
+class DpiAction(Action):
+    """{"kind": "dpi", "step": "next"|"previous"|"cycle"}: steps through the mouse's DPI stages."""
+
+    kind: str = "dpi"
+    step: str = "next"
+
+    def to_json(self):
+        return {"kind": self.kind, "step": self.step}
+
+    @classmethod
+    def load(cls, d):
+        return cls(step=d.get("step", "next"))
+
+    def describe(self):
+        return {"next": "DPI: next stage", "previous": "DPI: previous stage", "cycle": "DPI: cycle stages"}.get(
+            self.step, "DPI")
+
+
 _ACTIONS = {c.kind: c for c in (KeysAction, ScrollAction, TurboAction, MacroAction, DisableAction,
-                                HypershiftAction, ProfileAction)}
+                                HypershiftAction, ProfileAction, DpiAction)}
 
 
 # ── Profiles ─────────────────────────────────────────────────────────────────

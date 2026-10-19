@@ -23,7 +23,7 @@ from pathlib import Path
 import evdev
 from evdev import ecodes as e
 
-from . import model
+from . import osd, model
 from .actions import Running, Runner
 from .output import Output
 
@@ -31,6 +31,13 @@ log = logging.getLogger("engine")
 RAZER_VENDOR = 0x1532
 OWN_PRODUCTS = {0x5053, 0x5054}  # our own virtual keyboard and mouse
 BUS_VIRTUAL = 0x06
+ICONS = {"1532-00b4": "input-mouse-symbolic", "1532-022b": "input-gaming-symbolic", "1532-02a2": "input-keyboard-symbolic",
+         "1532-057a": "audio-headphones-symbolic"}
+
+
+def _short(name: str) -> str:
+    """"Razer Razer Tartarus V2" -> "Tartarus V2" for popups."""
+    return name.replace("Razer Inc ", "").replace("Razer ", "").strip()
 SOCKET = Path(os.environ.get("XDG_RUNTIME_DIR", f"/tmp/peripheral-studio-{os.getuid()}")) / "peripheral-studio" / "engine.sock"
 WHEELS = {e.REL_WHEEL: e.REL_WHEEL, e.REL_WHEEL_HI_RES: e.REL_WHEEL,
           e.REL_HWHEEL: e.REL_HWHEEL, e.REL_HWHEEL_HI_RES: e.REL_HWHEEL}
@@ -66,6 +73,8 @@ class Hypershift(Running):
         self.engine = engine
         engine.hypershift += 1
         engine.broadcast({"event": "hypershift", "active": True})
+        if engine.hypershift == 1:
+            osd.show("hypershift", "input-keyboard-symbolic", "Hypershift")
 
     def release(self):
         self.engine.hypershift = max(0, self.engine.hypershift - 1)
@@ -235,6 +244,7 @@ class Engine:
         if device := self.devices.get(device_id):
             device.override = None
             self.reload(device_id)
+            osd.show("profile", ICONS.get(device_id, "input-gaming-symbolic"), f"{_short(device.name)}: {profile}")
 
     def switch_profile_from(self, device_id: str, target: str, group: bool = False) -> None:
         names = model.list_profiles(device_id)
@@ -251,6 +261,32 @@ class Engine:
         if target in names:
             # Switch after this event is processed: the press that asked for it is still held.
             asyncio.get_running_loop().call_soon(self.activate, device_id, target)
+
+    def step_dpi(self, step: str) -> None:
+        """The Naga's DPI stages: "next", "previous" or "cycle" (wraps), with an on-screen popup."""
+
+        def work():
+            try:
+                from ..hardware.devices import NagaV2HyperSpeed
+                naga = NagaV2HyperSpeed.open()
+                if naga is None:
+                    return
+                current = naga.dpi[0]
+                _active, stages = naga.dpi_stages
+                levels = sorted({x for x, _y in stages}) or [400, 800, 1600, 3200, 6400]
+                i = min(range(len(levels)), key=lambda k: abs(levels[k] - current)) if current else 0
+                if step == "previous":
+                    i = max(0, i - 1)
+                elif step == "cycle":
+                    i = (i + 1) % len(levels)
+                else:
+                    i = min(len(levels) - 1, i + 1)
+                naga.dpi = (levels[i], levels[i])
+                osd.show("dpi", "input-mouse-symbolic", f"DPI {levels[i]}", (i + 1) / len(levels))
+            except Exception as ex:
+                log.warning("DPI change failed: %s", ex)
+
+        threading.Thread(target=work, name="dpi", daemon=True).start()
 
     def hold_hypershift(self) -> Running:
         return Hypershift(self)
@@ -270,6 +306,8 @@ class Engine:
             if match != device.override:
                 device.override = match
                 self.load_profile(device)
+                osd.show("profile", ICONS.get(device.id, "input-gaming-symbolic"),
+                         f"{_short(device.name)}: {self.active_name(device)}")
                 self._apply_grab(device)
                 self.broadcast({"event": "device", "device": device.id, "grabbed": device.grabbed,
                                 "profile": self.active_name(device), "app": app})

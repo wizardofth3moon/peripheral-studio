@@ -51,11 +51,17 @@ A device without a diagram can still be bound with **Find a button**.
    | Turbo | Repeats a key while the button is held |
    | Hypershift | Holds the Hypershift layer |
    | Profile | Switches to another profile |
+   | DPI | Next / previous / cycle through the mouse's DPI stages |
    | Disable | The button does nothing |
 
 3. Click **Apply**. The profile is saved and the engine applies it immediately.
 
 **Profiles:** use **+** to add a profile, and **⋮** to rename, duplicate or delete one. Switching profiles applies the new one immediately while remapping is on.
+
+## Profiles, lighting and popups
+
+- **Lighting with a profile:** on the Lighting page, turn on "Save with profile …". Switching to that profile (by hand, from a button, or by app) then brings its lighting back. Profiles without saved lighting leave the lighting alone.
+- **On-screen popups** for profile switches, DPI changes and Hypershift use GNOME's own on-screen display through the bundled extension `data/gnome-shell/peripheral-studio-osd@peripheral-studio` (copy it to `~/.local/share/gnome-shell/extensions/` and enable it; on Wayland it appears after logging in again). Without it they show as short notifications. Turn kinds off in `~/.config/peripheral-studio/settings.json`: `{"osd": {"profile": false, "dpi": true, "hypershift": false}}`.
 
 ## Limits
 
