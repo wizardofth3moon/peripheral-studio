@@ -173,6 +173,130 @@ def _ansi_keyboard(model: str) -> Layout:
     return Layout(model, [Section("Keyboard", main, silhouette="case"), Section("Navigation", nav, silhouette="case")], cell=11)
 
 
+def _ornata_v3_x() -> Layout:
+    """Full-size Ornata V3 X, key by key as measured from a reference photo of the keyboard (pixels
+    of ornata-v3-x.svg). Fn is handled inside the keyboard and sends nothing; its media functions
+    are shown as captions on the F-keys."""
+    keys = [  # (evdev name without KEY_, label, x, y, w, h, Fn function)
+        ('ESC', 'Esc', 42, 72, 68, 71, ''),
+        ('F1', 'F1', 200, 72, 68, 71, 'Mute'),
+        ('F2', 'F2', 278, 72, 69, 71, 'Vol −'),
+        ('F3', 'F3', 357, 73, 68, 70, 'Vol +'),
+        ('F4', 'F4', 435, 74, 69, 69, ''),
+        ('F5', 'F5', 555, 75, 67, 68, 'Prev'),
+        ('F6', 'F6', 633, 74, 68, 69, 'Play'),
+        ('F7', 'F7', 711, 75, 69, 68, 'Next'),
+        ('F8', 'F8', 790, 75, 69, 68, ''),
+        ('F9', 'F9', 909, 75, 68, 68, 'Macro rec'),
+        ('F10', 'F10', 986, 76, 70, 67, 'Game mode'),
+        ('F11', 'F11', 1065, 76, 69, 67, 'Light −'),
+        ('F12', 'F12', 1144, 75, 69, 68, 'Light +'),
+        ('SYSRQ', 'PrtSc', 1241, 75, 67, 68, ''),
+        ('SCROLLLOCK', 'ScrLk', 1319, 76, 68, 67, ''),
+        ('PAUSE', 'Pause', 1398, 76, 67, 67, 'Sleep'),
+        ('GRAVE', '`', 42, 169, 68, 70, ''),
+        ('1', '1', 120, 171, 69, 68, ''),
+        ('2', '2', 199, 171, 69, 68, ''),
+        ('3', '3', 278, 171, 69, 68, ''),
+        ('4', '4', 356, 171, 69, 68, ''),
+        ('5', '5', 436, 171, 68, 67, ''),
+        ('6', '6', 514, 171, 69, 68, ''),
+        ('7', '7', 593, 171, 69, 68, ''),
+        ('8', '8', 672, 171, 68, 67, ''),
+        ('9', '9', 751, 171, 68, 68, ''),
+        ('0', '0', 829, 170, 69, 69, ''),
+        ('MINUS', '-', 908, 170, 69, 69, ''),
+        ('EQUAL', '=', 987, 171, 69, 68, ''),
+        ('BACKSPACE', '⌫', 1066, 171, 146, 68, ''),
+        ('INSERT', 'Ins', 1241, 171, 67, 68, ''),
+        ('HOME', 'Home', 1319, 171, 68, 68, ''),
+        ('PAGEUP', 'PgUp', 1398, 171, 68, 68, ''),
+        ('NUMLOCK', 'Num', 1494, 171, 68, 68, ''),
+        ('KPSLASH', '/', 1571, 171, 69, 68, ''),
+        ('KPASTERISK', '*', 1649, 171, 70, 68, ''),
+        ('KPMINUS', '−', 1728, 171, 69, 68, ''),
+        ('TAB', 'Tab', 43, 248, 106, 69, ''),
+        ('Q', 'Q', 160, 249, 68, 68, ''),
+        ('W', 'W', 239, 248, 68, 69, ''),
+        ('E', 'E', 317, 248, 69, 69, ''),
+        ('R', 'R', 397, 249, 68, 68, ''),
+        ('T', 'T', 475, 249, 68, 68, ''),
+        ('Y', 'Y', 554, 249, 68, 68, ''),
+        ('U', 'U', 633, 249, 68, 68, ''),
+        ('I', 'I', 712, 249, 68, 68, ''),
+        ('O', 'O', 790, 248, 69, 69, ''),
+        ('P', 'P', 869, 249, 68, 68, ''),
+        ('LEFTBRACE', '[', 947, 249, 69, 68, ''),
+        ('RIGHTBRACE', ']', 1027, 249, 68, 68, ''),
+        ('BACKSLASH', '\\', 1106, 249, 106, 68, ''),
+        ('DELETE', 'Del', 1240, 249, 68, 68, ''),
+        ('END', 'End', 1319, 249, 68, 68, ''),
+        ('PAGEDOWN', 'PgDn', 1397, 249, 69, 68, ''),
+        ('KP7', '7', 1494, 248, 67, 70, ''),
+        ('KP8', '8', 1571, 248, 69, 69, ''),
+        ('KP9', '9', 1650, 248, 69, 70, ''),
+        ('KPPLUS', '+', 1728, 248, 70, 148, ''),
+        ('CAPSLOCK', 'Caps', 42, 327, 127, 69, ''),
+        ('A', 'A', 180, 328, 68, 68, ''),
+        ('S', 'S', 258, 327, 69, 69, ''),
+        ('D', 'D', 337, 328, 68, 68, ''),
+        ('F', 'F', 416, 328, 68, 68, ''),
+        ('G', 'G', 495, 328, 68, 68, ''),
+        ('H', 'H', 573, 328, 69, 68, ''),
+        ('J', 'J', 653, 328, 68, 68, ''),
+        ('K', 'K', 731, 328, 68, 68, ''),
+        ('L', 'L', 810, 328, 68, 68, ''),
+        ('SEMICOLON', ';', 889, 328, 68, 68, ''),
+        ('APOSTROPHE', "'", 967, 328, 69, 68, ''),
+        ('ENTER', 'Enter', 1046, 328, 166, 68, ''),
+        ('KP4', '4', 1494, 327, 67, 69, ''),
+        ('KP5', '5', 1571, 327, 69, 69, ''),
+        ('KP6', '6', 1651, 327, 68, 69, ''),
+        ('LEFTSHIFT', 'Shift', 42, 406, 167, 69, ''),
+        ('Z', 'Z', 219, 406, 69, 69, ''),
+        ('X', 'X', 297, 406, 69, 69, ''),
+        ('C', 'C', 377, 407, 68, 68, ''),
+        ('V', 'V', 456, 407, 68, 68, ''),
+        ('B', 'B', 534, 407, 68, 68, ''),
+        ('N', 'N', 613, 407, 68, 68, ''),
+        ('M', 'M', 692, 407, 68, 68, ''),
+        ('COMMA', ',', 771, 407, 68, 68, ''),
+        ('DOT', '.', 850, 407, 67, 68, ''),
+        ('SLASH', '/', 928, 407, 68, 68, ''),
+        ('RIGHTSHIFT', 'Shift', 1007, 407, 205, 68, ''),
+        ('UP', '↑', 1320, 407, 67, 68, ''),
+        ('KP1', '1', 1494, 406, 67, 69, ''),
+        ('KP2', '2', 1571, 406, 69, 69, ''),
+        ('KP3', '3', 1650, 406, 69, 69, ''),
+        ('KPENTER', 'Ent', 1728, 406, 69, 147, ''),
+        ('LEFTCTRL', 'Ctrl', 42, 485, 88, 68, ''),
+        ('LEFTMETA', 'Super', 140, 485, 88, 68, ''),
+        ('LEFTALT', 'Alt', 238, 484, 89, 69, ''),
+        ('SPACE', 'Space', 337, 485, 482, 68, ''),
+        ('RIGHTALT', 'Alt', 829, 485, 89, 68, ''),
+        ('FN', 'Fn', 928, 485, 88, 68, ''),
+        ('COMPOSE', 'Menu', 1027, 485, 87, 68, ''),
+        ('RIGHTCTRL', 'Ctrl', 1125, 485, 87, 68, ''),
+        ('LEFT', '←', 1241, 486, 67, 67, ''),
+        ('DOWN', '↓', 1319, 485, 68, 68, ''),
+        ('RIGHT', '→', 1397, 486, 69, 67, ''),
+        ('KP0', '0', 1494, 485, 146, 68, ''),
+        ('KPDOT', '.', 1649, 485, 70, 69, ''),
+    ]
+    # three-letter labels where the full one doesn't fit on a key this small (full names in tooltips)
+    SHORT = {"SYSRQ": "Prt", "SCROLLLOCK": "Scr", "PAUSE": "⏸", "HOME": "Hm", "PAGEUP": "P↑", "PAGEDOWN": "P↓",
+             "NUMLOCK": "NL", "LEFTMETA": "Win", "COMPOSE": "Mnu", "KPENTER": "↵"}
+    buttons = []
+    for name, label, x, y, w, h, fn in keys:
+        if name == "FN":
+            buttons.append(Button("fn", "Fn", KEY, 0, x, y, w, h, hardware="fn"))
+            continue
+        code = getattr(e, "KEY_" + name)
+        buttons.append(Button(name.lower(), label, KEY, code, x, y, w, h, caption=f"Fn: {fn}" if fn else "",
+                              short=SHORT.get(name, "")))
+    return Layout("Razer Ornata V3 X", [Section("Keyboard", buttons, silhouette="ornata-v3-x.svg", size=(1840, 756), cell=0.355)])
+
+
 def _blackshark_v3() -> Layout:
     return Layout("Razer BlackShark V3", [Section("Headset controls", [
         Button("mic_mute", "Mic mute", KEY, e.KEY_MICMUTE, 0, 0, 8, caption="Mute mic"),
@@ -187,6 +311,7 @@ def _blackshark_v3() -> Layout:
 _MODELS = {
     "tartarus v2": _tartarus_v2,
     "naga v2 hyperspeed": _naga_v2_hyperspeed,
+    "ornata v3 x": _ornata_v3_x,
     "ornata v3": lambda: _ansi_keyboard("Razer Ornata V3"),
     "blackshark v3": _blackshark_v3,
 }

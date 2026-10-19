@@ -28,6 +28,8 @@ MEDIA = [("KEY_PLAYPAUSE", "Play / pause"), ("KEY_NEXTSONG", "Next track"), ("KE
          ("KEY_CALC", "Calculator"), ("KEY_HOMEPAGE", "Browser"), ("KEY_MAIL", "Mail"), ("KEY_FILE", "Files"),
          ("KEY_BRIGHTNESSUP", "Brightness up"), ("KEY_BRIGHTNESSDOWN", "Brightness down")]
 HARDWARE_NOTES = {
+    "fn": "Fn is handled inside the keyboard: hold it with F1–F12 for media keys, backlight brightness, macro "
+          "recording and gaming mode (shown under each F-key). It sends nothing to the computer, so it can't be rebound.",
     "dpi": "Right now the mouse changes DPI with this button by itself. It reports the press over Razer's own "
            "USB channel rather than as a normal button, so binding it needs Peripheral Studio's native Razer "
            "support, which is next on the list. Until then, set the DPI steps it cycles through under Performance.",
@@ -427,10 +429,14 @@ class CustomizePage(Gtk.Box):
         box.append(Gtk.Label(label=b.short or b.label, css_classes=["key-label"], ellipsize=Pango.EllipsizeMode.END))
         caption = binding.action.describe() if binding else (inherited.action.describe() if inherited else b.caption)
         small = b.w * cell < 70
+        dense = on_device and b.h * cell < 40  # e.g. a full keyboard drawn at its real proportions
+        if dense and not binding:
+            caption = ""  # the default function shows in the tooltip instead
         if caption and (binding or not compact) and not (small and b.short and not binding):
             box.append(Gtk.Label(label=caption, css_classes=["key-caption"], ellipsize=Pango.EllipsizeMode.END))
-        w = Gtk.Button(child=box, css_classes=["key"] + (["compact"] if compact else []) + (["on-device"] if on_device else []),
-                       tooltip_text=f"{b.label}: {binding.action.describe() if binding else 'default'}")
+        w = Gtk.Button(child=box, css_classes=["key"] + (["compact"] if compact or dense else []) + (["on-device"] if on_device else [])
+                       + (["dense"] if dense else []),
+                       tooltip_text=f"{b.label}: {binding.action.describe() if binding else (b.caption or 'default')}")
         if b.hardware and inp is None:
             w.add_css_class("hardware")
             w.set_tooltip_text(f"{b.label}: handled by the device itself")

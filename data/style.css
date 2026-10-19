@@ -39,6 +39,9 @@ button.record.recording { border-color: #44d62c; color: #44d62c; }
 button.key.compact { padding: 0 1px; border-radius: 5px; }
 button.key.compact .key-label { font-size: 0.78em; }
 button.key.compact .key-caption { font-size: 0.62em; }
+button.key.dense { padding: 0; min-height: 0; min-width: 0; border-radius: 4px; }
+button.key.dense .key-label { font-size: 0.68em; }
+button.key.dense .key-caption { font-size: 0.55em; }
 button.key.hs-bound { border-color: #c8a2ff; box-shadow: inset 0 -2px 0 #9b6bff; }
 button.key.hs-bound .key-caption { color: #c8a2ff; }
 button.key.hs-key { background: linear-gradient(#2a2440, #201b33); }

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1840 756" width="1840" height="756">
+  <!-- Peripheral Studio original artwork: a simplified top view of a full-size low-profile keyboard with a
+       wrist rest, drawn as plain shapes at the proportions of a reference photo (the photo itself is not included). -->
+  <defs>
+    <linearGradient id="case" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2c31"/><stop offset="1" stop-color="#16171a"/>
+    </linearGradient>
+    <linearGradient id="rest" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#202226"/><stop offset="1" stop-color="#121315"/>
+    </linearGradient>
+  </defs>
+  <rect x="5" y="28" width="1829" height="592" rx="22" fill="url(#case)" stroke="#43464d" stroke-width="3"/>
+  <rect x="28" y="46" width="1786" height="526" rx="12" fill="#141518" stroke="#2f3237" stroke-width="2"/>
+  <text x="920" y="600" text-anchor="middle" font-family="sans-serif" font-size="17" letter-spacing="10" fill="#4a4d54">RAZER</text>
+  <!-- status lights: caps lock, num lock, scroll lock, macro, gaming mode -->
+  <g fill="#e8e8e8">
+    <circle cx="1527" cy="86" r="5"/><circle cx="1585" cy="86" r="5"/><circle cx="1643" cy="86" r="5"/>
+    <circle cx="1700" cy="86" r="5" fill="#ff3b30"/><circle cx="1758" cy="86" r="5"/>
+  </g>
+  <g fill="#6b6f77" font-family="sans-serif" font-size="16" text-anchor="middle">
+    <text x="1527" y="116">C</text><text x="1585" y="116">1</text><text x="1643" y="116">S</text>
+    <text x="1700" y="116">M</text><text x="1758" y="116">G</text>
+  </g>
+  <!-- wrist rest -->
+  <rect x="5" y="626" width="1829" height="126" rx="20" fill="url(#rest)" stroke="#30333a" stroke-width="3"/>
+  <path d="M906 698 q14 -18 28 -4 q-4 15 -14 18" fill="none" stroke="#2c2e33" stroke-width="4" stroke-linecap="round"/>
+</svg>
