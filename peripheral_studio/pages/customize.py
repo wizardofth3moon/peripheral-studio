@@ -1,8 +1,10 @@
 """Customize: the device diagram, profiles, layers and the binding editor."""
 from __future__ import annotations
 
+import json
+
 from evdev import ecodes
-from gi.repository import Adw, GLib, Gtk, Pango
+from gi.repository import Adw, Gio, GLib, Gtk, Pango
 
 from ..engine import client, model
 from ..layouts import Button
@@ -194,7 +196,8 @@ class CustomizePage(Gtk.Box):
         pop = Gtk.Popover()
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4)
         for label, cb in (("Linked apps…", self._edit_apps), ("Rename…", self._rename_profile),
-                          ("Duplicate…", self._duplicate_profile), ("Delete", self._delete_profile)):
+                          ("Duplicate…", self._duplicate_profile), ("Export…", self._export_profile),
+                          ("Import…", self._import_profile), ("Delete", self._delete_profile)):
             b = Gtk.Button(label=label, css_classes=["flat"])
             b.get_child().set_xalign(0)
             b.connect("clicked", lambda _b, cb=cb: (pop.popdown(), cb()))
@@ -282,6 +285,69 @@ class CustomizePage(Gtk.Box):
             copy.save()
             self._switch_to(name)
         self._ask_name("Duplicate profile", f"{self.profile.name} copy", done)
+
+    # ── export / import: one profile as a .json file, to back up or share ──
+
+    EXPORT_FORMAT = 1
+
+    def _export_profile(self):
+        dialog = Gtk.FileDialog(title="Export profile", initial_name=f"{self.device.name} - {self.profile.name}.json")
+
+        def done(d, result):
+            try:
+                path = d.save_finish(result).get_path()
+            except GLib.Error:
+                return  # cancelled
+            data = {"peripheral_studio_profile": self.EXPORT_FORMAT, "device": self.device.id,
+                    "device_name": self.device.name,
+                    "profile": model.Profile.load(self.device.id, self.profile.name).to_json()}
+            try:
+                with open(path, "w") as f:
+                    json.dump(data, f, indent=2)
+                self.window.toast(f"Exported “{self.profile.name}”")
+            except OSError as ex:
+                self.window.toast(f"Couldn't export: {ex}")
+
+        dialog.save(self.window, None, done)
+
+    def _import_profile(self):
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        f = Gtk.FileFilter(name="Peripheral Studio profiles")
+        f.add_pattern("*.json")
+        filters.append(f)
+        dialog = Gtk.FileDialog(title="Import profile", filters=filters)
+
+        def done(d, result):
+            try:
+                path = d.open_finish(result).get_path()
+            except GLib.Error:
+                return
+            try:
+                with open(path) as fh:
+                    data = json.load(fh)
+                if data.get("peripheral_studio_profile") != self.EXPORT_FORMAT or "profile" not in data:
+                    raise ValueError("not a Peripheral Studio profile")
+                if data.get("device") != self.device.id:
+                    raise ValueError(f"it was made for {data.get('device_name') or data.get('device')}, "
+                                     f"not the {self.device.name}")
+                raw = data["profile"]
+                names = set(model.list_profiles(self.device.id))
+                name = base = raw.get("name") or "Imported"
+                n = 2
+                while name in names:
+                    name, n = f"{base} ({n})", n + 1
+                raw["name"] = name
+                target = model.Profile.load(self.device.id, name)  # empty profile at that name
+                target.path.parent.mkdir(parents=True, exist_ok=True)
+                target.path.write_text(json.dumps(raw, indent=2))
+                model.Profile.load(self.device.id, name)  # checks it parses
+            except (OSError, ValueError, KeyError) as ex:
+                self.window.toast(f"Couldn't import: {ex}")
+                return
+            self._switch_to(name)
+            self.window.toast(f"Imported “{name}”")
+
+        dialog.open(self.window, None, done)
 
     def _rename_profile(self):
         def done(name):
