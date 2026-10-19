@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Peripheral Studio icon: a keycap with a remap arrow (original artwork). -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2e33"/><stop offset="1" stop-color="#15171a"/>
+    </linearGradient>
+    <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a3e45"/><stop offset="1" stop-color="#25282d"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#bg)"/>
+  <rect x="26" y="30" width="76" height="68" rx="14" fill="#101114" />
+  <rect x="30" y="30" width="68" height="60" rx="12" fill="url(#cap)" stroke="#44d62c" stroke-width="3"/>
+  <path d="M46 66 a18 18 0 0 1 31 -13" fill="none" stroke="#44d62c" stroke-width="6" stroke-linecap="round"/>
+  <path d="M82 44 l-2 14 -13 -5 z" fill="#44d62c"/>
+  <circle cx="64" cy="66" r="5" fill="#44d62c"/>
+</svg>

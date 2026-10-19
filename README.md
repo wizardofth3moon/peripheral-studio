@@ -11,6 +11,19 @@ It is self-contained: no OpenRazer and no input-remapper needed.
   - **Synapse 4 import:** brings over profiles from a Windows Synapse install.
 - **Lighting, DPI, polling rate and power:** Peripheral Studio talks to the devices directly, with Razer's settings commands over hidraw (see [docs/razer-protocol.md](docs/razer-protocol.md)). A device it has no driver for falls back to OpenRazer, if that happens to be installed.
 
+## Install
+
+```sh
+packaging/build-deb.sh                      # builds dist/peripheral-studio_<version>_all.deb (+ razer-cfg255-dkms)
+sudo apt install ./dist/peripheral-studio_0.1.0_all.deb
+sudo apt install ./dist/razer-cfg255-dkms_1.0_all.deb   # only for a BlackShark V3; replug its dongle after
+gnome-extensions enable peripheral-studio-osd@peripheral-studio   # popups; takes effect after logging in again
+```
+
+The package installs the app (`/usr/lib/peripheral-studio`), the remap engine as a user service (enabled for all users),
+the udev rule, uhid/uinput loading at boot and the GNOME popup extension. It conflicts with input-remapper's daemon:
+both would try to own the same devices.
+
 ## Run
 
 ```sh
