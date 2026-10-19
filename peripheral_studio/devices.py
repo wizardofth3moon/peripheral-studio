@@ -93,7 +93,7 @@ def discover() -> list[Device]:
             dev = evdev.InputDevice(path)
         except OSError:
             continue
-        if (dev.info.vendor != 0x1532 or dev.info.product in (0x5053, 0x5054)
+        if (dev.info.vendor != 0x1532 or dev.info.product in (0x5053, 0x5054) or dev.info.bustype == 0x06
                 or dev.name.startswith(("input-remapper", "Peripheral Studio")) or "(Peripheral Studio)" in dev.name):
             continue
         phys = (dev.phys or dev.name).split("/input")[0]

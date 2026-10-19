@@ -84,6 +84,8 @@ class Transport:
         with self.lock:
             fd = os.open(self.path, os.O_RDWR | os.O_CLOEXEC)
             try:
+                # the engine (battery checks) and the app share the device: one request at a time
+                fcntl.flock(fd, fcntl.LOCK_EX)
                 return self._request(fd, report, command_class, command_id, retries)
             finally:
                 os.close(fd)

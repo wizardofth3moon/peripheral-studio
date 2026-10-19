@@ -3,5 +3,12 @@
 # Install: sudo cp 70-peripheral-studio.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
 SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1532", TAG+="uaccess"
 SUBSYSTEM=="input", ATTRS{idVendor}=="1532", TAG+="uaccess"
+# the BlackShark V3 dongle's USB node (the app reads its descriptors)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1532", ATTR{idProduct}=="057a", TAG+="uaccess"
 # the remap engine's virtual keyboard and mouse
 KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
+# the battery service's virtual battery devices (shown in the desktop's power menu)
+KERNEL=="uhid", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uhid"
+# UPower takes a HID battery's kind from the input node next to it: mark the headset's as a headset
+SUBSYSTEM=="input", KERNEL=="input*", ATTR{uniq}=="peripheral-studio-1532-057a", ENV{SOUND_INITIALIZED}="1", ENV{SOUND_FORM_FACTOR}="headset"
+SUBSYSTEM=="input", KERNEL=="input*", ATTR{uniq}=="peripheral-studio-1532-0579", ENV{SOUND_INITIALIZED}="1", ENV{SOUND_FORM_FACTOR}="headset"

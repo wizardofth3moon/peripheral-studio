@@ -76,7 +76,26 @@ class Window(Adw.ApplicationWindow):
                 self.customize.engine_changed(up)
         return True
 
+    def _show_batteries(self, levels):
+        """Battery badges in the sidebar, from the engine's battery service."""
+        if isinstance(levels, Exception) or not isinstance(levels, dict):
+            return
+        for did, badge in getattr(self, "battery_badges", {}).items():
+            info = levels.get(did)
+            if not info or info.get("percent") is None:
+                continue
+            pct = round(info["percent"])
+            charging = info.get("charging")
+            level = "full" if pct >= 90 else "good" if pct >= 50 else "low" if pct >= 20 else "caution"
+            badge.icon.set_from_icon_name(f"battery-{level}{'-charging' if charging else ''}-symbolic")
+            badge.label.set_text(f"{pct}%")
+            badge.set_tooltip_text(f"Battery {pct}%" + (", charging" if charging else ""))
+            badge.set_visible(True)
+
     def _on_engine_event(self, msg):
+        if msg.get("event") == "battery":
+            self._show_batteries(msg.get("levels", {}))
+            return
         if not self.engine_up:
             self.engine_up = True
             if self.customize:
@@ -128,10 +147,19 @@ class Window(Adw.ApplicationWindow):
         self.devices = result
         while row := self.device_list.get_row_at_index(0):
             self.device_list.remove(row)
+        self.battery_badges = {}
         for d in self.devices:
             row = Adw.ActionRow(title=d.name, subtitle=KIND_LABEL.get(d.kind, "Device"))
             row.add_prefix(Gtk.Image(icon_name=ICONS.get(d.kind, "input-gaming-symbolic"), pixel_size=24))
+            badge = Gtk.Box(spacing=3, valign=Gtk.Align.CENTER, visible=False, css_classes=["dim-label"])
+            badge.icon = Gtk.Image(icon_name="battery-good-symbolic")
+            badge.label = Gtk.Label(css_classes=["caption"])
+            badge.append(badge.icon)
+            badge.append(badge.label)
+            row.add_suffix(badge)
+            self.battery_badges[d.id] = badge
             self.device_list.append(row)
+        run_bg(lambda: client.call("status", timeout=1.0).get("batteries", {}), self._show_batteries)
         if not self.devices:
             self.content.set_content(Adw.StatusPage(icon_name="input-gaming-symbolic", title="No Razer devices found",
                                                     description="Plug one in, then refresh."))

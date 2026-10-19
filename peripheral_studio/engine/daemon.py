@@ -29,6 +29,7 @@ from .output import Output
 log = logging.getLogger("engine")
 RAZER_VENDOR = 0x1532
 OWN_PRODUCTS = {0x5053, 0x5054}  # our own virtual keyboard and mouse
+BUS_VIRTUAL = 0x06
 SOCKET = Path(os.environ.get("XDG_RUNTIME_DIR", f"/tmp/peripheral-studio-{os.getuid()}")) / "peripheral-studio" / "engine.sock"
 WHEELS = {e.REL_WHEEL: e.REL_WHEEL, e.REL_WHEEL_HI_RES: e.REL_WHEEL,
           e.REL_HWHEEL: e.REL_HWHEEL, e.REL_HWHEEL_HI_RES: e.REL_HWHEEL}
@@ -82,6 +83,7 @@ class Engine:
         # Last inputs seen, for diagnostics ({"cmd": "recent"}): which code a button really sends.
         self.recent: collections.deque = collections.deque(maxlen=50)
         self._rescan_handle = None
+        self.batteries = None  # hardware.batteries.Batteries, started in run()
 
     # ── Devices ──────────────────────────────────────────────────────────────
 
@@ -97,6 +99,7 @@ class Engine:
             except OSError:
                 continue
             if (dev.info.vendor != RAZER_VENDOR or dev.info.product in OWN_PRODUCTS
+                    or dev.info.bustype == BUS_VIRTUAL  # our own battery devices (hardware/uhid.py)
                     or dev.name.startswith(("input-remapper", "Peripheral Studio")) or "(Peripheral Studio)" in dev.name):
                 dev.close()
                 continue
@@ -380,7 +383,8 @@ class Engine:
                 "devices": [{"id": d.id, "name": d.name, "nodes": len(d.nodes), "grabbed": d.grabbed,
                              "profile": self.active_name(d), "override": d.override is not None,
                              "enabled": bool(d.state and d.state.enabled)}
-                            for d in self.devices.values()]}
+                            for d in self.devices.values()],
+                "batteries": self.batteries.snapshot() if self.batteries else {}}
 
     def broadcast(self, msg: dict) -> None:
         if msg.get("event") == "input":
@@ -467,6 +471,14 @@ async def run() -> None:
     os.chmod(SOCKET, 0o600)
 
     engine.scan()
+
+    # Battery levels of the Naga and the BlackShark: to the desktop power menu and to the app
+    try:
+        from ..hardware.batteries import Batteries
+        engine.batteries = Batteries(
+            on_change=lambda levels: loop.call_soon_threadsafe(engine.broadcast, {"event": "battery", "levels": levels}))
+    except Exception as ex:
+        log.warning("no battery service: %s", ex)
 
     # Hotplug: the Naga's receiver drops and re-adds nodes when the mouse sleeps and wakes.
     try:
