@@ -11,6 +11,17 @@ It is self-contained: no OpenRazer and no input-remapper needed.
   - **Synapse 4 import:** brings over profiles from a Windows Synapse install.
 - **Lighting, DPI, polling rate and power:** Peripheral Studio talks to the devices directly, with Razer's settings commands over hidraw (see [docs/razer-protocol.md](docs/razer-protocol.md)). A device it has no driver for falls back to OpenRazer, if that happens to be installed.
 
+## Screenshots
+
+| | |
+| --- | --- |
+| ![Tartarus V2 keybinds](docs/screenshots/customize-tartarus.png) | ![Per-key colours](docs/screenshots/lighting-tartarus.png) |
+| **Customize:** the Tartarus V2 with a WoW profile | **Lighting:** per-key colours on the Tartarus V2 |
+| ![Ornata V3 X](docs/screenshots/customize-ornata.png) | ![BlackShark V3 audio](docs/screenshots/audio-blackshark.png) |
+| **Customize:** the full Ornata V3 X | **Audio:** BlackShark V3 EQ, mic and mixing |
+| ![Naga V2 HyperSpeed](docs/screenshots/performance-naga.png) | |
+| **Performance:** Naga DPI stages, polling, battery | |
+
 ## Install
 
 ```sh
